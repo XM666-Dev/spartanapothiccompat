@@ -1,0 +1,13 @@
+{
+  "itemGroup.spartanapothiccompat": "Example Mod Tab",
+  "block.spartanapothiccompat.example_block": "Example Block",
+  "item.spartanapothiccompat.example_item": "Example Item",
+
+  "spartanapothiccompat.configuration.title": "SpartanApothicCompat Configs",
+  "spartanapothiccompat.configuration.section.spartanapothiccompat.common.toml": "SpartanApothicCompat Configs",
+  "spartanapothiccompat.configuration.section.spartanapothiccompat.common.toml.title": "SpartanApothicCompat Configs",
+  "spartanapothiccompat.configuration.items": "Item List",
+  "spartanapothiccompat.configuration.logDirtBlock": "Log Dirt Block",
+  "spartanapothiccompat.configuration.magicNumberIntroduction": "Magic Number Text",
+  "spartanapothiccompat.configuration.magicNumber": "Magic Number"
+}
