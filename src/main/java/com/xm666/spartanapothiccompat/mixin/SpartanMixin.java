@@ -25,7 +25,7 @@ public class SpartanMixin {
     @Mixin(ThrowingWeaponEntity.class)
     private static class ThrowingWeaponEntityMixin {
         @ModifyVariable(method = "onHitEntity", at = @At(value = "STORE"), name = "src")
-        private static DamageSource onSetDamageSource(DamageSource damageSource, @Local(name = "level") Level level, @Local(name = "weapon") ItemStack weapon, @Local(name = "entity") Entity entity, @Local(name = "damage") LocalFloatRef damage) {
+        private DamageSource onSetDamageSource(DamageSource damageSource, @Local(name = "level") Level level, @Local(name = "weapon") ItemStack weapon, @Local(name = "entity") Entity entity, @Local(name = "damage") LocalFloatRef damage) {
             if (!(level instanceof ServerLevel serverLevel)) return damageSource;
 
             damage.set(EnchantmentHelper.modifyDamage(serverLevel, weapon, entity, damageSource, damage.get()));
@@ -33,7 +33,7 @@ public class SpartanMixin {
         }
 
         @Inject(method = "onHitEntity", at = @At(value = "INVOKE", target = "Lorg/xiyu/spartanweaponryunofficial/entity/projectile/ThrowingWeaponEntity;doPostHurtEffects(Lnet/minecraft/world/entity/LivingEntity;)V"))
-        private static void onPostHurtEffects(EntityHitResult hitResult, CallbackInfo ci, @Local(name = "level") Level level, @Local(name = "entitylivingbase") LivingEntity living, @Local(name = "src") DamageSource damageSource, @Local(name = "weapon") ItemStack weapon) {
+        private void onPostHurtEffects(EntityHitResult hitResult, CallbackInfo ci, @Local(name = "level") Level level, @Local(name = "entitylivingbase") LivingEntity living, @Local(name = "src") DamageSource damageSource, @Local(name = "weapon") ItemStack weapon) {
             if (!(level instanceof ServerLevel serverLevel)) return;
 
             EnchantmentHelper.doPostAttackEffectsWithItemSource(serverLevel, living, damageSource, weapon);
