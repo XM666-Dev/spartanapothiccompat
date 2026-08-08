@@ -1,10 +1,13 @@
 package com.xm666.spartanapothiccompat.mixin;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalFloatRef;
 import com.oblivioussp.spartanweaponry.entity.projectile.ThrowingWeaponEntity;
 import com.xm666.spartanapothiccompat.AttributeHandler;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -25,6 +28,14 @@ public class SpartanMixin {
 
             damage.set(damage.get() + EnchantmentHelper.getDamageBonus(weapon, living.getMobType()));
             return damageSource;
+        }
+
+        @WrapOperation(method = "onHitEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/enchantment/EnchantmentHelper;doPostDamageEffects(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/entity/Entity;)V"))
+        private void wrapPostDamageEffects(LivingEntity shooter, Entity entity, Operation<Void> original, @Local(name = "weapon") ItemStack weapon) {
+            var originalStack = shooter.getItemInHand(InteractionHand.MAIN_HAND);
+            shooter.setItemInHand(InteractionHand.MAIN_HAND, weapon);
+            original.call(shooter, entity);
+            shooter.setItemInHand(InteractionHand.MAIN_HAND, originalStack);
         }
 
         @ModifyExpressionValue(method = "onHitEntity", at = @At(value = "INVOKE", target = "Lcom/oblivioussp/spartanweaponry/entity/projectile/ThrowingWeaponEntity;getBaseDamage()D"))

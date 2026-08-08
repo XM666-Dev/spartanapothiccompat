@@ -1,5 +1,6 @@
 package com.xm666.spartanapothiccompat.mixin;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
@@ -9,6 +10,7 @@ import com.oblivioussp.spartanweaponry.entity.projectile.ThrowingWeaponEntity;
 import com.oblivioussp.spartanweaponry.init.ModDamageTypes;
 import com.oblivioussp.spartanweaponry.item.SwordBaseItem;
 import com.oblivioussp.spartanweaponry.item.ThrowingWeaponItem;
+import dev.shadowsoffire.apotheosis.adventure.affix.effect.PotionAffix;
 import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
 import dev.shadowsoffire.attributeslib.impl.AttributeEvents;
 import net.minecraft.world.InteractionHand;
@@ -18,7 +20,10 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import org.objectweb.asm.Opcodes;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 
 public class ApothicMixin {
@@ -123,6 +128,33 @@ public class ApothicMixin {
                     && swordBaseItem.hasWeaponTraitWithType(WeaponTraits.TYPE_THROWABLE))) return original;
 
             return LootCategory.TRIDENT;
+        }
+    }
+
+    @Mixin(PotionAffix.class)
+    private static class PotionAffixMixin {
+        @Shadow(remap = false)
+        @Final
+        protected PotionAffix.Target target;
+
+        @ModifyExpressionValue(method = "doPostAttack", at = @At(value = "FIELD", target = "Ldev/shadowsoffire/apotheosis/adventure/affix/effect/PotionAffix$Target;ATTACK_SELF:Ldev/shadowsoffire/apotheosis/adventure/affix/effect/PotionAffix$Target;", opcode = Opcodes.GETSTATIC, remap = false), remap = false)
+        private PotionAffix.Target modifyAttackSelf(PotionAffix.Target original, ItemStack stack) {
+            var item = stack.getItem();
+            if (!(item instanceof ThrowingWeaponItem)
+                    && !(item instanceof SwordBaseItem swordBaseItem
+                    && swordBaseItem.hasWeaponTraitWithType(WeaponTraits.TYPE_THROWABLE))) return original;
+
+            return target == PotionAffix.Target.ARROW_SELF ? PotionAffix.Target.ARROW_SELF : original;
+        }
+
+        @ModifyExpressionValue(method = "doPostAttack", at = @At(value = "FIELD", target = "Ldev/shadowsoffire/apotheosis/adventure/affix/effect/PotionAffix$Target;ATTACK_TARGET:Ldev/shadowsoffire/apotheosis/adventure/affix/effect/PotionAffix$Target;", opcode = Opcodes.GETSTATIC, remap = false), remap = false)
+        private PotionAffix.Target modifyAttackTarget(PotionAffix.Target original, ItemStack stack) {
+            var item = stack.getItem();
+            if (!(item instanceof ThrowingWeaponItem)
+                    && !(item instanceof SwordBaseItem swordBaseItem
+                    && swordBaseItem.hasWeaponTraitWithType(WeaponTraits.TYPE_THROWABLE))) return original;
+
+            return target == PotionAffix.Target.ARROW_TARGET ? PotionAffix.Target.ARROW_TARGET : original;
         }
     }
 }

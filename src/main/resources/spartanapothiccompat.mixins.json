@@ -6,6 +6,7 @@
   "mixins": [
     "ApothicMixin$AttributeEventsMixin",
     "ApothicMixin$LootCategoryMixin",
+    "ApothicMixin$PotionAffixMixin",
     "SpartanMixin$ThrowingWeaponEntityMixin"
   ],
   "injectors": {
