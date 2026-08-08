@@ -144,8 +144,6 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 
-    compileOnly(annotationProcessor("com.github.bawnorton.mixinsquared:mixinsquared-common:0.3.7-beta.3"))
-    implementation(jarJar("com.github.bawnorton.mixinsquared:mixinsquared-neoforge:0.3.7-beta.3"))
     implementation "curse.maven:spartan-weaponry-unofficial-1450963:8423182"
     implementation "curse.maven:apotheosis-313970:8564919"
     implementation "curse.maven:apothic-attributes-898963:8502288"
