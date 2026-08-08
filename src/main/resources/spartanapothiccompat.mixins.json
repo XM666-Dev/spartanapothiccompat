@@ -3,9 +3,12 @@
   "package": "com.xm666.spartanapothiccompat.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "ApothicMixin$AttributeEventsMixin",
-    "ApothicMixin$LootCategoryMixin",
-    "SpartanMixin$ThrowingWeaponEntityMixin"
+    "AffixMixin$DamageMixin$ThrowingWeaponEntityMixin",
+    "AffixMixin$EffectMixin$AffixHelperMixin",
+    "AffixMixin$EffectMixin$LootCategoryMixin",
+    "AffixMixin$EffectMixin$ThrowingWeaponEntityMixin",
+    "AttributeMixin$DamageMixin$ThrowingWeaponEntityMixin",
+    "AttributeMixin$EffectMixin$AttributeEventsMixin"
   ],
   "injectors": {
     "defaultRequire": 1
