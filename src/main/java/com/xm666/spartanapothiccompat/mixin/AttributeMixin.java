@@ -59,7 +59,7 @@ public class AttributeMixin {
             }
 
             @WrapMethod(method = "meleeDamageAttributes")
-            private void wrapMeleeDamageAttributesDirectEntity(LivingIncomingDamageEvent event, Operation<Void> original) {
+            private void wrapMeleeDamageAttributes(LivingIncomingDamageEvent event, Operation<Void> original) {
                 var source = event.getSource();
                 if (!source.is(ModDamageTypes.KEY_THROWN_WEAPON_PLAYER) && !source.is(ModDamageTypes.KEY_THROWN_WEAPON_MOB)) {
                     original.call(event);
