@@ -20,7 +20,7 @@ public class SpartanMixin {
     @Mixin(ThrowingWeaponEntity.class)
     private static class ThrowingWeaponEntityMixin {
         @ModifyVariable(method = "onHitEntity", at = @At(value = "STORE"), name = "src")
-        private static DamageSource onSetDamageSource(DamageSource damageSource, @Local(name = "weapon") ItemStack weapon, @Local(name = "entity") Entity entity, @Local(name = "damage") LocalFloatRef damage) {
+        private DamageSource onSetDamageSource(DamageSource damageSource, @Local(name = "weapon") ItemStack weapon, @Local(name = "entity") Entity entity, @Local(name = "damage") LocalFloatRef damage) {
             if (!(entity instanceof LivingEntity living)) return damageSource;
 
             damage.set(damage.get() + EnchantmentHelper.getDamageBonus(weapon, living.getMobType()));
