@@ -1,46 +1,46 @@
 package com.xm666.spartanapothiccompat.mixin;
 
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.ref.LocalFloatRef;
-import dev.shadowsoffire.apotheosis.Apoth;
-import dev.shadowsoffire.apotheosis.affix.AffixHelper;
-import dev.shadowsoffire.apotheosis.loot.LootCategory;
-import net.minecraft.server.level.ServerLevel;
+import com.oblivioussp.spartanweaponry.api.WeaponTraits;
+import com.oblivioussp.spartanweaponry.entity.projectile.ThrowingWeaponEntity;
+import com.oblivioussp.spartanweaponry.item.SwordBaseItem;
+import com.oblivioussp.spartanweaponry.item.ThrowingWeaponItem;
+import dev.shadowsoffire.apotheosis.adventure.affix.AffixHelper;
+import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
+import dev.shadowsoffire.apotheosis.adventure.socket.SocketHelper;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.EntityHitResult;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.xiyu.spartanweaponryunofficial.api.WeaponTraits;
-import org.xiyu.spartanweaponryunofficial.entity.projectile.ThrowingWeaponEntity;
-import org.xiyu.spartanweaponryunofficial.item.SwordBaseItem;
-import org.xiyu.spartanweaponryunofficial.item.ThrowingWeaponItem;
 
 public class AffixMixin {
     private static class DamageMixin {
         @Mixin(ThrowingWeaponEntity.class)
         private static class ThrowingWeaponEntityMixin {
             @ModifyVariable(method = "onHitEntity", at = @At(value = "STORE"), name = "src")
-            private DamageSource onSetDamageSource(DamageSource damageSource, @Local(name = "level") Level level, @Local(name = "weapon") ItemStack weapon, @Local(name = "entity") Entity entity, @Local(name = "damage") LocalFloatRef damage) {
-                if (!(level instanceof ServerLevel serverLevel)) return damageSource;
+            private DamageSource onSetDamageSource(DamageSource damageSource, @Local(name = "weapon") ItemStack weapon, @Local(name = "entity") Entity entity, @Local(name = "damage") LocalFloatRef damage) {
+                if (!(entity instanceof LivingEntity living)) return damageSource;
 
-                damage.set(EnchantmentHelper.modifyDamage(serverLevel, weapon, entity, damageSource, damage.get()));
+                damage.set(damage.get() + EnchantmentHelper.getDamageBonus(weapon, living.getMobType()));
                 return damageSource;
             }
         }
     }
 
     private static class EffectMixin {
-        @Mixin(LootCategory.class)
+        @Mixin(value = LootCategory.class, remap = false)
         private static class LootCategoryMixin {
             @ModifyReturnValue(method = "forItem", at = @At("RETURN"))
             private static LootCategory modifyForItem(LootCategory original, ItemStack stack) {
@@ -49,31 +49,50 @@ public class AffixMixin {
                         && !(item instanceof SwordBaseItem swordBaseItem
                         && swordBaseItem.hasWeaponTraitWithType(WeaponTraits.TYPE_THROWABLE))) return original;
 
-                return Apoth.LootCategories.TRIDENT;
+                return LootCategory.TRIDENT;
             }
         }
 
         @Mixin(ThrowingWeaponEntity.class)
         private static class ThrowingWeaponEntityMixin {
-            @Inject(method = "onHitEntity", at = @At(value = "INVOKE", target = "Lorg/xiyu/spartanweaponryunofficial/entity/projectile/ThrowingWeaponEntity;doPostHurtEffects(Lnet/minecraft/world/entity/LivingEntity;)V"))
-            private void onPostHurtEffects(EntityHitResult hitResult, CallbackInfo ci, @Local(name = "level") Level level, @Local(name = "shooter") Entity shooter, @Local(name = "entitylivingbase") LivingEntity living, @Local(name = "src") DamageSource damageSource, @Local(name = "weapon") ItemStack weapon) {
-                if (!(level instanceof ServerLevel serverLevel) || !(shooter instanceof LivingEntity livingShooter))
-                    return;
-
-                var originalStack = livingShooter.getMainHandItem();
-                livingShooter.setItemInHand(InteractionHand.MAIN_HAND, weapon);
-                EnchantmentHelper.doPostAttackEffectsWithItemSource(serverLevel, living, damageSource, weapon);
-                livingShooter.setItemInHand(InteractionHand.MAIN_HAND, originalStack);
+            @WrapOperation(method = "onHitEntity", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/enchantment/EnchantmentHelper;doPostDamageEffects(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/entity/Entity;)V"))
+            private void wrapPostDamageEffects(LivingEntity shooter, Entity entity, Operation<Void> original, @Local(name = "weapon") ItemStack weapon) {
+                var originalStack = shooter.getItemInHand(InteractionHand.MAIN_HAND);
+                shooter.setItemInHand(InteractionHand.MAIN_HAND, weapon);
+                original.call(shooter, entity);
+                shooter.setItemInHand(InteractionHand.MAIN_HAND, originalStack);
             }
         }
 
         @Mixin(AffixHelper.class)
         private static class AffixHelperMixin {
-            @ModifyReturnValue(method = "getSourceWeapon", at = @At("RETURN"))
-            private static ItemStack modifySourceWeapon(ItemStack original, Entity entity) {
-                if (original != ItemStack.EMPTY || !(entity instanceof ThrowingWeaponEntity)) return original;
+            @ModifyExpressionValue(method = "getAffixes(Lnet/minecraft/world/entity/projectile/AbstractArrow;)Ljava/util/Map;", at = @At(value = "INVOKE", target = "Lnet/minecraft/nbt/CompoundTag;getCompound(Ljava/lang/String;)Lnet/minecraft/nbt/CompoundTag;", ordinal = 0))
+            private static CompoundTag modifyAffixData(CompoundTag original, AbstractArrow arrow) {
+                if (original != null && !original.isEmpty() || !(arrow instanceof ThrowingWeaponEntity throwingWeapon))
+                    return original;
 
-                return entity.getWeaponItem();
+                var weapon = throwingWeapon.getWeaponItem();
+                return weapon != null ? weapon.getTagElement(AffixHelper.AFFIX_DATA) : null;
+            }
+
+            @ModifyReturnValue(method = "getShooterCategory", at = @At("RETURN"), remap = false)
+            private static LootCategory modifyShooterCategory(LootCategory original, Entity entity) {
+                if (original != null || !(entity instanceof ThrowingWeaponEntity throwingWeapon)) return original;
+
+                var weapon = throwingWeapon.getWeaponItem();
+                return weapon != null ? LootCategory.forItem(weapon) : null;
+            }
+        }
+
+        @Mixin(SocketHelper.class)
+        private static class SocketHelperMixin {
+            @ModifyExpressionValue(method = "getGems(Lnet/minecraft/world/entity/projectile/AbstractArrow;)Ljava/util/List;", at = @At(value = "INVOKE", target = "Lnet/minecraft/nbt/CompoundTag;getCompound(Ljava/lang/String;)Lnet/minecraft/nbt/CompoundTag;"))
+            private static CompoundTag modifyAffixData(CompoundTag original, AbstractArrow arrow) {
+                if (original != null && !original.isEmpty() || !(arrow instanceof ThrowingWeaponEntity throwingWeapon))
+                    return original;
+
+                var weapon = throwingWeapon.getWeaponItem();
+                return weapon != null ? weapon.getTagElement(AffixHelper.AFFIX_DATA) : null;
             }
         }
     }
