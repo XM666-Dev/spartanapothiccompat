@@ -4,27 +4,22 @@ import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
-import com.llamalad7.mixinextras.sugar.Local;
-import dev.shadowsoffire.apotheosis.Apoth;
-import dev.shadowsoffire.apotheosis.loot.LootCategory;
-import dev.shadowsoffire.apothic_attributes.impl.AttributeEvents;
-import dev.shadowsoffire.apothic_attributes.util.AuxDmgTracker;
+import com.oblivioussp.spartanweaponry.api.WeaponTraits;
+import com.oblivioussp.spartanweaponry.entity.projectile.ThrowingWeaponEntity;
+import com.oblivioussp.spartanweaponry.init.ModDamageTypes;
+import com.oblivioussp.spartanweaponry.item.SwordBaseItem;
+import com.oblivioussp.spartanweaponry.item.ThrowingWeaponItem;
+import dev.shadowsoffire.apotheosis.adventure.loot.LootCategory;
+import dev.shadowsoffire.attributeslib.impl.AttributeEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
-import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
-import org.xiyu.spartanweaponryunofficial.api.WeaponTraits;
-import org.xiyu.spartanweaponryunofficial.init.ModDamageTypes;
-import org.xiyu.spartanweaponryunofficial.item.SwordBaseItem;
-import org.xiyu.spartanweaponryunofficial.item.ThrowingWeaponItem;
-
-import java.util.function.Consumer;
 
 public class ApothicMixin {
     @Mixin(AttributeEvents.class)
@@ -45,33 +40,20 @@ public class ApothicMixin {
             return instance.getEntity();
         }
 
-        @ModifyArg(method = "meleeDamageAttributes", at = @At(value = "INVOKE", target = "Ldev/shadowsoffire/apothic_attributes/util/AuxDmgTracker;executeWith(Lnet/minecraft/world/entity/LivingEntity;Ljava/util/function/Consumer;)V"))
-        private Consumer<AuxDmgTracker> wrapMeleeDamageAttributesDirectEntity(Consumer<AuxDmgTracker> consumer, @Local(argsOnly = true) LivingIncomingDamageEvent event, @Local(name = "attacker") LivingEntity attacker) {
-            var source = event.getSource();
-            if (!source.is(ModDamageTypes.KEY_THROWN_WEAPON_PLAYER) && !source.is(ModDamageTypes.KEY_THROWN_WEAPON_MOB))
-                return consumer;
-
-            var weaponStack = source.getWeaponItem();
-            if (weaponStack == null) return consumer;
-
-            var originalStack = attacker.getItemInHand(InteractionHand.MAIN_HAND);
-            return tracker -> {
-                attacker.setItemInHand(InteractionHand.MAIN_HAND, weaponStack);
-                attacker.detectEquipmentUpdates();
-                consumer.accept(tracker);
-                attacker.setItemInHand(InteractionHand.MAIN_HAND, originalStack);
-            };
-        }
-
-        @WrapMethod(method = "lifeStealOverheal")
-        private void wrapLifeStealOverheal(LivingDamageEvent.Post event, Operation<Void> original) {
+        @WrapMethod(method = "meleeDamageAttributes", remap = false)
+        private void wrapMeleeDamageAttributes(LivingAttackEvent event, Operation<Void> original) {
             var source = event.getSource();
             if (!source.is(ModDamageTypes.KEY_THROWN_WEAPON_PLAYER) && !source.is(ModDamageTypes.KEY_THROWN_WEAPON_MOB)) {
                 original.call(event);
                 return;
             }
 
-            var weaponStack = source.getWeaponItem();
+            if (!(source.getDirectEntity() instanceof ThrowingWeaponEntity weaponEntity)) {
+                original.call(event);
+                return;
+            }
+
+            var weaponStack = weaponEntity.getWeaponItem();
             if (weaponStack == null) {
                 original.call(event);
                 return;
@@ -90,7 +72,39 @@ public class ApothicMixin {
             attacker.setItemInHand(InteractionHand.MAIN_HAND, originalStack);
         }
 
-        @ModifyReturnValue(method = "canBenefitFromDrawSpeed", at = @At(value = "RETURN"))
+        @WrapMethod(method = "lifeStealOverheal", remap = false)
+        private void wrapLifeStealOverheal(LivingHurtEvent event, Operation<Void> original) {
+            var source = event.getSource();
+            if (!source.is(ModDamageTypes.KEY_THROWN_WEAPON_PLAYER) && !source.is(ModDamageTypes.KEY_THROWN_WEAPON_MOB)) {
+                original.call(event);
+                return;
+            }
+
+            if (!(source.getDirectEntity() instanceof ThrowingWeaponEntity weaponEntity)) {
+                original.call(event);
+                return;
+            }
+
+            var weaponStack = weaponEntity.getWeaponItem();
+            if (weaponStack == null) {
+                original.call(event);
+                return;
+            }
+
+            var entity = event.getSource().getEntity();
+            if (!(entity instanceof LivingEntity attacker)) {
+                original.call(event);
+                return;
+            }
+
+            var originalStack = attacker.getItemInHand(InteractionHand.MAIN_HAND);
+            attacker.setItemInHand(InteractionHand.MAIN_HAND, weaponStack);
+            attacker.detectEquipmentUpdates();
+            original.call(event);
+            attacker.setItemInHand(InteractionHand.MAIN_HAND, originalStack);
+        }
+
+        @ModifyReturnValue(method = "canBenefitFromDrawSpeed", at = @At(value = "RETURN"), remap = false)
         private boolean modifyBenefitFromDrawSpeed(boolean benefit, ItemStack stack) {
             return benefit
                     || stack.getItem() instanceof ThrowingWeaponItem
@@ -99,7 +113,7 @@ public class ApothicMixin {
         }
     }
 
-    @Mixin(LootCategory.class)
+    @Mixin(value = LootCategory.class, remap = false)
     private static class LootCategoryMixin {
         @ModifyReturnValue(method = "forItem", at = @At("RETURN"))
         private static LootCategory modifyForItem(LootCategory original, ItemStack stack) {
@@ -108,7 +122,7 @@ public class ApothicMixin {
                     && !(item instanceof SwordBaseItem swordBaseItem
                     && swordBaseItem.hasWeaponTraitWithType(WeaponTraits.TYPE_THROWABLE))) return original;
 
-            return Apoth.LootCategories.TRIDENT;
+            return LootCategory.TRIDENT;
         }
     }
 }
