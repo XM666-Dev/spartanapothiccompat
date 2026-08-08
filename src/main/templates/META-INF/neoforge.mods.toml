@@ -89,16 +89,16 @@ config="${mod_id}.mixins.json"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
-    modId="apotheosis"
+    modId="spartan_weaponry_unofficial"
     type="required"
-    versionRange="[8.7.0,)"
+    versionRange="[1.2.2,)"
     ordering="NONE"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
-    modId="spartan_weaponry_unofficial"
+    modId="apotheosis"
     type="required"
-    versionRange="[1.2.2,)"
+    versionRange="[8.7.0,)"
     ordering="NONE"
     side="BOTH"
 
